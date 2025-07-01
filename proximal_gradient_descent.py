@@ -97,7 +97,7 @@ def warm_start(
     X: InputData,
     L_init: list[FactorMatrix],
     *,
-    glassoregs: list[float],
+    glassoregs: list[float] | list[tuple[float]],
     frobreg: Optional[float] = None,
     sample_axes: set[Axis] = set({}),
     mu: Momentum = 0.2,
@@ -109,7 +109,14 @@ def warm_start(
     verbose: bool = False
 ) -> tuple[list[list[FactorMatrix]], dict[float, Diagnostics]]:
     Ls = L_init
-    diagnostics = dict({glassoreg: None for glassoreg in glassoregs})
+    try:
+        diagnostics = dict({glassoreg: None for glassoreg in glassoregs})
+    except TypeError:
+        raise TypeError(
+            "Glassoreg should either be list[float], or list[tuple[float]], "
+            + "and never list[list[float]]."
+        )
+
     outputs = []
     for glassoreg in glassoregs:
         if verbose:
