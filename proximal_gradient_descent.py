@@ -57,7 +57,10 @@ def proximal_accelerated_gradient(
     beta: float,
     max_iter: int = 1000,
     tol: float = 1e-5,
-) -> tuple[list[FactorMatrix], Diagnostics]:
+    _momentum_import: Optional[list[FactorMatrix]] = None,
+    return_momentum: bool = False,
+    _delay_proximal_until: int = 0
+) -> tuple[list[FactorMatrix], Diagnostics] | tuple[list[FactorMatrix], Diagnostics, list[FactorMatrix]]:
     """
     Gradient descent algorithm
     """
@@ -72,11 +75,21 @@ def proximal_accelerated_gradient(
     for i in range(max_iter):
         grad = del_f(Ls)
         if i > 0:
-            accelerated_Ls = P([L + mu * (L - old_L) for L, old_L in zip(Ls, oldest_Ls)])
+            _momentum_import = ([(L - old_L) for L, old_L in zip(Ls, oldest_Ls)])
+            accelerated_Ls = P([L + mu * mom for L, mom in zip(Ls, _momentum_import)])
+        elif _momentum_import is not None:
+            accelerated_Ls = P([L + mu * mom for L, mom in zip(Ls, _momentum_import)])
         else:
             accelerated_Ls = Ls
         oldest_Ls = Ls
-        Ls = proximal_backtracking_line_search(f, prox, P, grad, accelerated_Ls, init_alpha, tau, beta)
+
+        # When warm starting, it's helpful to turn off L1 for a few iterations...
+        if _delay_proximal_until <= i:
+            _prox = prox
+        else:
+            _prox = lambda x: x
+
+        Ls = proximal_backtracking_line_search(f, _prox, P, grad, accelerated_Ls, init_alpha, tau, beta)
 
         new_f = f(Ls)
         delta = new_f - cur_f
@@ -91,7 +104,10 @@ def proximal_accelerated_gradient(
             break
         cur_f = new_f
 
-    return Ls, (objs, eps, grads, nonzeros)
+    if return_momentum:
+        return Ls, (objs, eps, grads, nonzeros), _momentum_import
+    else:
+        return Ls, (objs, eps, grads, nonzeros)
 
 def warm_start(
     X: InputData,
@@ -106,9 +122,10 @@ def warm_start(
     beta: float = 0.0001,
     max_iter: int = 50000,
     tol: float = 1e-20,
-    verbose: bool = False
+    verbose: bool = False,
+    dont_warm_start: bool = False
 ) -> tuple[list[list[FactorMatrix]], dict[float, Diagnostics]]:
-    Ls = L_init
+    Ls = [L.copy() for L in L_init]
     try:
         diagnostics = dict({glassoreg: None for glassoreg in glassoregs})
     except TypeError:
@@ -116,6 +133,7 @@ def warm_start(
             "Glassoreg should either be list[float], or list[tuple[float]], "
             + "and never list[list[float]]."
         )
+    momentum = None
 
     outputs = []
     for glassoreg in glassoregs:
@@ -128,7 +146,7 @@ def warm_start(
             sample_axes=sample_axes
         )
 
-        Ls, diags = proximal_accelerated_gradient(
+        new_Ls, diags, momentum = proximal_accelerated_gradient(
             f=objective,
             del_f=gradient,
             prox=proximal,
@@ -139,10 +157,18 @@ def warm_start(
             tau=tau,
             beta=beta,
             max_iter=max_iter,
-            tol=tol
+            tol=tol,
+            _momentum_import=momentum,
+            return_momentum=True,
+            _delay_proximal_until=1
         )
         diagnostics[glassoreg] = diags
-        outputs.append(Ls)
+        outputs.append(new_Ls)
+
+        # Perturb slightly
+        Ls = [new_L + 0 * glassoreg[i] for i, new_L in enumerate(new_Ls)]
+        if dont_warm_start:
+            Ls = [L.copy() for L in L_init]
     return outputs, diagnostics
 
 
