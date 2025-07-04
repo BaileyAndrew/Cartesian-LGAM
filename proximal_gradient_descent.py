@@ -166,7 +166,7 @@ def warm_start(
         outputs.append(new_Ls)
 
         # Perturb slightly
-        Ls = [new_L + 0 * glassoreg[i] for i, new_L in enumerate(new_Ls)]
+        Ls = [new_L.copy() for new_L in new_Ls]
         if dont_warm_start:
             Ls = [L.copy() for L in L_init]
     return outputs, diagnostics
