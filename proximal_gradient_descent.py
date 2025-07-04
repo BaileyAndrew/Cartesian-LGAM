@@ -59,7 +59,7 @@ def proximal_accelerated_gradient(
     tol: float = 1e-5,
     _momentum_import: Optional[list[FactorMatrix]] = None,
     return_momentum: bool = False,
-    _delay_proximal_until: int = 0
+    _delay_proximal_until: int = 1
 ) -> tuple[list[FactorMatrix], Diagnostics] | tuple[list[FactorMatrix], Diagnostics, list[FactorMatrix]]:
     """
     Gradient descent algorithm
@@ -188,8 +188,8 @@ def get_optimizer_oracles(
         frobreg = 1/np.prod(X.shape)**(1/len(X.shape))
     if glassoregs is None:
         glassoregs = [0 for _ in range(X.ndims)]
-    if isinstance(glassoregs, float):
-        glassoregs = [glassoregs for _ in range(X.ndim)]
+    if isinstance(glassoregs, float) | isinstance(glassoregs, int):
+        glassoregs = [glassoregs * 1.0 for _ in range(X.ndim)]
 
     objective: ObjectiveOracle
     def objective(Ls: list[FactorMatrix], decomp=False) -> float:
