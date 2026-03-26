@@ -4,7 +4,11 @@ This repository contains the code to generate the results given in our paper.
 
 ## Our dependencies
 
-We exported our environment to `environment.yaml`.
+We exported our environment to `environment.yaml`.  To create a conda environment that mirrors ours, run:
+
+```
+conda env create -f environment.yml
+```
 
 ## Our Model
 
@@ -67,5 +71,5 @@ For the tables, the code block will output text of this form:
 
 ## Supplementary Materials
 
-* Figure A: The code to generate this is located in `krum_experiment_pseudotime.ipynb`.  Warning: it takes a long time to run over the whole grid search.  The results of the grid search have been pickled as `results/krum_grid_pt`.
+* Figure A: The code to generate this is located in `krum_experiment_pseudotime.ipynb`.  Warning: it takes a long time to run over the whole grid search.
 * Figure B: The code to generate this is located in `krum_experiment_no_domain.ipynb`.  Warning: it takes a long time to run over the whole grid search.
